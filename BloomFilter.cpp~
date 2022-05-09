@@ -1,0 +1,110 @@
+#include "BloomFilter.h"
+#include "sharedFuncts.h"
+
+
+BloomFilter::BloomFilter(double p, int m, float c, float d) : hashtable(997) {
+  n = bloomFilterSize(p,m,c);
+  k = numHashFunctions(n,m,d);
+  bloom_filter = new bool[n]();
+}//constructor           
+
+vector<int> BloomFilter::generateCode(int stringToIntVal) { //codeForbThisWord returns a vector of all the indices in the bloomFilter where the given key would be set to true                                          
+  vector<int> codeForThisWord;
+  for (int i = 1; i <= k; i++) {
+    codeForThisWord.push_back(hash(stringToIntVal, i)); //vector of hash values of each hash function for given word                                                                                      
+  }
+  return codeForThisWord;
+}
+
+void BloomFilter::remove(std::string element){
+  int elem_int =  strToInt(element);
+
+  vector<int> elem_code = generateCode(elem_int);
+  if (find(element) == true) {
+
+    for (int index : elem_code) bloom_filter[index] = false;
+  }
+  hashtable.insert(element); //deleted elements get inserted into hash-table                                                                                                                                 
+}
+
+void BloomFilter::insert(std::string element){
+  int elem_int =  strToInt(element);
+
+  vector<int> elem_code = generateCode(elem_int);
+  for (int index : elem_code)  {
+    bloom_filter[index] = true;
+  }
+  if (hashtable.find(element) == true) hashtable.remove(element); //if inserting an element that was previously deleted
+}
+
+bool BloomFilter::find(std::string element){
+
+  bool elem_exists = true;
+  int elem_int =  strToInt(element);
+
+  vector<int> elem_code = generateCode(elem_int);
+  for (int index : elem_code) {
+    if (bloom_filter[index] == true) continue;
+    else {
+      elem_exists = false;
+      break;
+    }
+  }
+  return elem_exists;
+}
+
+void BloomFilter::reset() {
+  for (int i = 0; i < n; i++) bloom_filter[i] = false;
+}
+int BloomFilter::bloomFilterSize(double p, int m, float c) const {
+  return -((m*log(p)) / pow(log(2),2))*c;
+
+}
+
+int BloomFilter::numHashFunctions(int n, int m, float d) const{
+  return (n/m)*log(2)*d;
+
+}
+
+int BloomFilter::getHashTableSize() {
+  return hashtable.tableSize;
+}
+
+int BloomFilter::hash(unsigned int element, int index) {
+  return h(element,n,SieveOfEratosthenes(n*2), index);
+}
+
+long int BloomFilter::h(int key, int m, int p, int seed) { //p is the prime number, and m is the size of the bloom filter
+  srand(seed);
+  int a = rand();
+  int b = rand();
+  long int val = abs(((a*key + b)%p)%m);
+  return val;
+}
+
+int BloomFilter::SieveOfEratosthenes(int n) const { //returns largest prime number less than or equal to n, used to find p
+  bool prime[n + 1];
+  memset(prime, true, sizeof(prime));
+  for (int p = 2; p * p <= n; p++)
+    {
+      if (prime[p] == true)
+        {
+          for (int i = p * p; i <= n; i += p)
+            prime[i] = false;
+        }
+    }
+  int result = 0;
+  for (int p = 2; p <= n; p++)
+    if (prime[p])
+      result = p;
+  return result;
+}
+
+void BloomFilter::print() {
+  for (int i = 0; i < n; i++) {
+    cout << bloom_filter[i];
+  }
+  cout << endl;
+  cout << "number of hash functions: " << k << endl;
+}
+
